@@ -34,60 +34,81 @@ def avatar(addr):
         # otherwise fetch it from the live page
         protocol = addr.scheme
 
-        src = None
         base = protocol + '://' + host + path
-        res = requests.get(base)
+        try:
+            res = requests.get(base)
+        except requests.exceptions.ConnectionError:
+            return abort(404)
         base = res.url
         html = res.text.encode('utf-8')
 
-        # try microformats2
-        try:
-            parsed = Parser(doc=html).to_dict()
-            # try rel=icon
-            if 'icon' in parsed['rels']:
-                for link in parsed['rels']['icon'][::-1]:
-                    src = link
-                    src = complete_url(base, src) if src else None
-                    if requests.head(src).ok:
-                        break
-                    else:
-                        src = None
-            # try h-card photo
-            if not src:
-                for item in parsed['items']:
-                    if u'h-card' in item['type']:
-                        if u'photo' in item['properties']:
-                            for link in item['properties']['photo'][0]:
-                                src = link
-                                src = complete_url(base, src) if src else None
-                                if requests.head(src).ok:
-                                    break
-                                else:
-                                    src = None
+        # alternatives to consider
+        alt = Alternatives(base, host, path)
 
-        except requests.exceptions.ConnectionError:
-            pass
+        # try microformats2
+        parsed = Parser(doc=html).to_dict()
+        # try rel=icon
+        if 'icon' in parsed['rels']:
+            for src in parsed['rels']['icon']:
+                print src
+                alt.consider(src)
+        # try h-card photo
+        for item in parsed['items']:
+            if u'h-card' in item['type']:
+                if u'photo' in item['properties']:
+                    for src in item['properties']['photo']:
+                        print src
+                        alt.consider(src)
 
         # try microdata
-        if not src:
-            try:
-                items = microdata.get_items(html)
-                if len(items):
-                    src = items[0].image
-                    src = complete_url(base, src) if src else None
-                    src = None if not requests.head(src).ok else src
-            except requests.exceptions.ConnectionError:
-                pass
+        items = microdata.get_items(html)
+        if len(items):
+            for item in items:
+                alt.consider(item.image)
 
-        # when we find nothing
-        if not src:
-            src = 'http://robohash.org/' + host + path
+        # use best
+        final = alt.best() or alt.robohash()
 
         # save to redis
         #redis.setex(host + path, src, datetime.timedelta(days=15))
 
         # return
-        return redirect(src)
+        return redirect(final)
 
-def complete_url(base, src):
-    return src if src.startswith('http://') or src.startswith('https://') else urlparse.urljoin(base, src)
+class Alternatives(object):
+    def __init__(self, base, host, path):
+        self.considering = []
+        self.host = host
+        self.path = path
+        self.base = base
+
+    def consider(self, url):
+        if not url or type(url) is not str and type(url) is not unicode:
+            return
+
+        url = self.complete(url)
+        r = requests.head(url)
+        if not r.ok:
+            return
+
+        alternative = {'url': url, 'size': 6000}
+        if 'content-length' in r.headers:
+            alternative['size'] = int(r.headers['content-length'])
+        self.considering.append(alternative)
+
+    def best(self):
+        if not self.considering:
+            return None
+
+        ordered = sorted(self.considering, key=lambda x: x['size'], reverse=True)
+        print ordered
+        return ordered[0]['url']
+
+    def complete(self, url):
+        if url.startswith('http://') or url.startswith('https://'):
+            return url
+        else:
+            return urlparse.urljoin(self.base, url)
+
+    def robohash(self):
+        return 'http://robohash.org/' + self.host + self.path
