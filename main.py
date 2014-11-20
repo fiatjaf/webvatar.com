@@ -60,7 +60,7 @@ def avatar(addr):
 
         # when we find nothing
         if not src:
-            return abort(404)
+            src = 'http://robohash.org/' + host + path
 
         # save to redis
         redis.set(host + path, src)
