@@ -34,11 +34,15 @@ def avatar(addr):
         # otherwise fetch it from the live page
         protocol = addr.scheme
 
-        # try microformats2
         src = None
         base = protocol + '://' + host + path
+        res = requests.get(base)
+        base = res.url
+        html = res.text.encode('utf-8')
+
+        # try microformats2
         try:
-            parsed = Parser(url=base).to_dict()
+            parsed = Parser(doc=html).to_dict()
             # try rel=icon
             if 'icon' in parsed['rels']:
                 src = parsed['rels']['icon'][-1]
@@ -56,18 +60,17 @@ def avatar(addr):
         # try microdata
         if not src:
             try:
-                html = requests.get(base).text.encode('utf-8')
                 items = microdata.get_items(html)
                 if len(items):
-                    image = items[0].image
-                    if image:
-                        src = image if image.startswith('http://') or image.startswith('https://') else urlparse.urljoin(base, image)
+                    src = items[0].image
             except requests.exceptions.ConnectionError:
                 pass
 
         # when we find nothing
         if not src:
             src = 'http://robohash.org/' + host + path
+        else:
+            src = src if src.startswith('http://') or src.startswith('https://') else urlparse.urljoin(base, src)
 
         # save to redis
         #redis.setex(host + path, src, datetime.timedelta(days=15))
