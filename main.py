@@ -15,7 +15,7 @@ redis = r.Redis(host=url.hostname, port=url.port, password=url.password)
 app = Flask(__name__)
 app.debug = True
 
-@app.route('/<addr>/')
+@app.route('/<path:addr>/')
 def avatar(addr):
     if not addr.startswith('https://') and not addr.startswith('http://'):
         addr = 'http://' + addr
