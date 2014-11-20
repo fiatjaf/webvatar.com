@@ -45,14 +45,25 @@ def avatar(addr):
             parsed = Parser(doc=html).to_dict()
             # try rel=icon
             if 'icon' in parsed['rels']:
-                src = parsed['rels']['icon'][-1]
+                for link in parsed['rels']['icon'][::-1]:
+                    src = link
+                    src = complete_url(base, src) if src else None
+                    if requests.head(src).ok:
+                        break
+                    else:
+                        src = None
             # try h-card photo
             if not src:
                 for item in parsed['items']:
                     if u'h-card' in item['type']:
                         if u'photo' in item['properties']:
-                            src = item['properties']['photo'][0]
-                            break
+                            for link in item['properties']['photo'][0]:
+                                src = link
+                                src = complete_url(base, src) if src else None
+                                if requests.head(src).ok:
+                                    break
+                                else:
+                                    src = None
 
         except requests.exceptions.ConnectionError:
             pass
@@ -63,17 +74,20 @@ def avatar(addr):
                 items = microdata.get_items(html)
                 if len(items):
                     src = items[0].image
+                    src = complete_url(base, src) if src else None
+                    src = None if not requests.head(src).ok else src
             except requests.exceptions.ConnectionError:
                 pass
 
         # when we find nothing
         if not src:
             src = 'http://robohash.org/' + host + path
-        else:
-            src = src if src.startswith('http://') or src.startswith('https://') else urlparse.urljoin(base, src)
 
         # save to redis
         #redis.setex(host + path, src, datetime.timedelta(days=15))
 
         # return
         return redirect(src)
+
+def complete_url(base, src):
+    return src if src.startswith('http://') or src.startswith('https://') else urlparse.urljoin(base, src)
