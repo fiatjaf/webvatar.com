@@ -38,12 +38,18 @@ def avatar(addr):
         src = None
         base = protocol + '://' + host + path
         try:
-            parsed = Parser(url=base)
-            for item in parsed.to_dict()['items']:
-                if u'h-card' in item['type']:
-                    if u'photo' in item['properties']:
-                        src = item['properties']['photo'][0]
-                        break
+            parsed = Parser(url=base).to_dict()
+            # try rel=icon
+            if 'icon' in parsed['rels']:
+                src = parsed['rels']['icon'][-1]
+            # try h-card photo
+            if not src:
+                for item in parsed['items']:
+                    if u'h-card' in item['type']:
+                        if u'photo' in item['properties']:
+                            src = item['properties']['photo'][0]
+                            break
+
         except requests.exceptions.ConnectionError:
             pass
 
