@@ -24,13 +24,13 @@ def avatar(addr):
     path = addr.path if addr.path and addr.path != '/' else ''
 
     # search in our cache
-    cached_src = redis.get(host)
-    if not cached_src and path:
-        cached_src = redis.get(host + path)
-    if cached_src:
-        return redirect(cached_src)
+    #cached_src = redis.get(host)
+    #if not cached_src and path:
+    #    cached_src = redis.get(host + path)
+    #if cached_src:
+    #    return redirect(cached_src)
 
-    else:
+    if True:
         # otherwise fetch it from the live page
         protocol = addr.scheme
 
@@ -70,7 +70,7 @@ def avatar(addr):
             src = 'http://robohash.org/' + host + path
 
         # save to redis
-        redis.setex(host + path, src, datetime.timedelta(days=15))
+        #redis.setex(host + path, src, datetime.timedelta(days=15))
 
         # return
         return redirect(src)
