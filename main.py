@@ -87,7 +87,7 @@ class Alternatives(object):
             return
 
         url = self.complete(url)
-        r = requests.head(url)
+        r = requests.head(url, verify=False)
         if not r.ok:
             return
 
