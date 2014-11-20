@@ -4,6 +4,7 @@ import os
 import urlparse
 import requests
 import datetime
+import hashlib
 import microdata
 from mf2py.parser import Parser
 from flask import Flask, session, jsonify, redirect, request, render_template, abort, redirect
@@ -67,7 +68,12 @@ def avatar(addr):
                 alt.consider(item.image)
 
         # use best
-        final = alt.best() or alt.robohash()
+        final = alt.best()
+        if not final:
+            if request.args.get('alt') == 'hash':
+                final = alt.hashshow()
+            else:
+                final = alt.robohash()
 
         # save to redis
         #redis.setex(host + path, src, datetime.timedelta(days=15))
@@ -112,3 +118,9 @@ class Alternatives(object):
 
     def robohash(self):
         return 'http://robohash.org/' + self.host + self.path
+
+    def hashshow(self):
+        l = hashlib.sha256(self.host + self.path).hexdigest()
+        lines = '|'.join((l[0:11], l[11:21], l[21:32], l[32:43], l[43:52], l[52:64]))
+        url = 'http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|32|r|000|_|' + lines
+        return url
