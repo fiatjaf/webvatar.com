@@ -3,6 +3,7 @@
 import os
 import urlparse
 import requests
+import datetime
 import microdata
 from mf2py.parser import Parser
 from flask import Flask, session, jsonify, redirect, request, render_template, abort, redirect
@@ -63,7 +64,7 @@ def avatar(addr):
             src = 'http://robohash.org/' + host + path
 
         # save to redis
-        redis.set(host + path, src)
+        redis.setex(host + path, src, datetime.timedelta(days=15))
 
         # return
         return redirect(src)
