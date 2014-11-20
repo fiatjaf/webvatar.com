@@ -1,6 +1,9 @@
 # -*- encoding: utf-8 -*-
 
+from __future__ import division
+
 import os
+import math
 import urlparse
 import requests
 import datetime
@@ -51,14 +54,12 @@ def avatar(addr):
         # try rel=icon
         if 'icon' in parsed['rels']:
             for src in parsed['rels']['icon']:
-                print src
                 alt.consider(src)
         # try h-card photo
         for item in parsed['items']:
             if u'h-card' in item['type']:
                 if u'photo' in item['properties']:
                     for src in item['properties']['photo']:
-                        print src
                         alt.consider(src)
 
         # try microdata
@@ -70,10 +71,12 @@ def avatar(addr):
         # use best
         final = alt.best()
         if not final:
-            if request.args.get('alt') == 'hash':
+            if request.args.get('alt') == 'robohash':
+                final = alt.robohash()
+            elif request.args.get('alt') == 'hash':
                 final = alt.hashshow()
             else:
-                final = alt.robohash()
+                final = alt.nameshow()
 
         # save to redis
         #redis.setex(host + path, src, datetime.timedelta(days=15))
@@ -107,7 +110,6 @@ class Alternatives(object):
             return None
 
         ordered = sorted(self.considering, key=lambda x: x['size'], reverse=True)
-        print ordered
         return ordered[0]['url']
 
     def complete(self, url):
@@ -123,4 +125,13 @@ class Alternatives(object):
         l = hashlib.sha256(self.host + self.path).hexdigest()
         lines = '|'.join((l[0:11], l[11:21], l[21:32], l[32:43], l[43:52], l[52:64]))
         url = 'http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|32|r|000|_|' + lines
+        return url
+
+    def nameshow(self):
+        line = self.host + self.path
+        linelen = len(line)
+        n = linelen/3 if linelen > 30 else linelen/2 if linelen > 20 else linelen
+        n = int(math.ceil(n))
+        lines = '|'.join([line[i:i+n] for i in range(0, linelen, n)])
+        url = 'http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||' + lines + '||'
         return url
