@@ -8,7 +8,7 @@ beautifulsoup4==4.3.2
 gunicorn==19.1.1
 html5lib==0.999
 itsdangerous==0.24
-mf2py==0.2.1
+git+https://github.com/kartikprabhu/mf2py@d44a49f7de2060cee719463df27b46cdd97c30f0
 microdata==0.5.1
 redis==2.10.3
 requests==2.4.3

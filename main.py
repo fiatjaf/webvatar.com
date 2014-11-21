@@ -59,8 +59,8 @@ def avatar(addr):
                 alt.consider(src)
         # try h-card photo
         for item in parsed['items']:
-            if u'h-card' in item['type']:
-                if u'photo' in item['properties']:
+            if 'h-card' in item['type']:
+                if 'photo' in item['properties']:
                     for src in item['properties']['photo']:
                         alt.consider(src)
 
