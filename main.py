@@ -110,6 +110,8 @@ class Alternatives(object):
         alternative = {'url': url, 'size': 6000}
         if 'content-length' in r.headers:
             alternative['size'] = int(r.headers['content-length'])
+            if 'jpeg' in r.headers['content-type'] or 'jpg' in r.headers['content-type']:
+                alternative['size'] *= 2
         self.considering.append(alternative)
 
     def best(self, ignoresmall=True):
