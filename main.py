@@ -42,7 +42,7 @@ def avatar(addr):
 
         base = protocol + '://' + host + path
         try:
-            res = requests.get(base)
+            res = requests.get(base, verify=False)
         except requests.exceptions.ConnectionError:
             return abort(404)
         base = res.url
