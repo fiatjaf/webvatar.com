@@ -32,12 +32,14 @@ def avatar(addr):
     path = addr.path if addr.path and addr.path != '/' else ''
 
     # search in our cache
-    cached_src = redis.get(host + path) or redis.get(host) if path else None
-    if cached_src:
-        return redirect(cached_src)
+    cached = redis.get(host + path) or redis.get(host) if path else None
 
-    else:
-        # otherwise fetch it from the live page
+    if cached:
+        # if something is found, send it
+        return redirect(cached)
+
+    elif cached == None:
+        # otherwise try to fetch from the live page
         protocol = addr.scheme
 
         base = protocol + '://' + host + path
@@ -70,21 +72,24 @@ def avatar(addr):
             for item in items:
                 alt.consider(item.image)
 
-        # use best
-        final = alt.best()
-        if not final:
-            if request.args.get('alt') == 'robohash':
-                final = alt.robohash()
-            elif request.args.get('alt') == 'hash':
-                final = alt.hashshow()
-            else:
-                final = alt.nameshow()
+        # get best (or blank string)
+        ignoresmall = not request.args.get('acceptsmall', False)
+        final = alt.best(ignoresmall=ignoresmall)
 
         # save to redis
         redis.setex(host + path, final, datetime.timedelta(days=3))
 
         # return
-        return redirect(final)
+        if final:
+            return redirect(final)
+
+    # if nothing was found until now, send an alt
+    if request.args.get('alt') == 'robohash':
+        return redirect(alt.robohash())
+    elif request.args.get('alt') == 'hash':
+        return redirect(alt.hashshow())
+    else:
+        return redirect(alt.nameshow())
 
 class Alternatives(object):
     def __init__(self, base, host, path):
@@ -107,11 +112,13 @@ class Alternatives(object):
             alternative['size'] = int(r.headers['content-length'])
         self.considering.append(alternative)
 
-    def best(self):
-        if not self.considering:
-            return None
-
-        ordered = sorted(self.considering, key=lambda x: x['size'], reverse=True)
+    def best(self, ignoresmall=True):
+        eligible = self.considering
+        if ignoresmall:
+            eligible = filter(lambda x: x['size'] > 4500, eligible)
+        if len(eligible) == 0:
+            return ''
+        ordered = sorted(eligible, key=lambda x: x['size'], reverse=True)
         return ordered[0]['url']
 
     def complete(self, url):
