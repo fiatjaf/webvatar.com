@@ -25,6 +25,7 @@ def index():
 
 @app.route('/<path:addr>/')
 def avatar(addr):
+    addr = addr.lower()
     if not addr.startswith('https://') and not addr.startswith('http://'):
         addr = 'http://' + addr
     addr = urlparse.urlparse(addr)
