@@ -48,7 +48,7 @@ def avatar(addr):
         siloimg = silo.fetch(host, live_page, request.args) # (request.args are holding
                                                             # things like facebook ids)
         if siloimg:
-            redis.setex(host + path, siloimg, datetime.timedelta(days=3)) # cache
+            redis.setex(host + path, siloimg, datetime.timedelta(days=15)) # cache
             return redirect(siloimg)
 
         try:
@@ -84,7 +84,7 @@ def avatar(addr):
         ignoresmall = not request.args.get('acceptsmall', False)
         final = alt.best(ignoresmall=ignoresmall)
 
-        redis.setex(host + path, final, datetime.timedelta(days=3)) # cache
+        redis.setex(host + path, final, datetime.timedelta(days=15)) # cache
 
         # return
         if final:
