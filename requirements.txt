@@ -13,5 +13,6 @@ microdata==0.5.1
 redis==2.10.3
 requests==2.4.3
 six==1.8.0
+tweepy==2.3.0
 uWSGI==2.0.8
 wsgiref==0.1.2

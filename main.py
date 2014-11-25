@@ -11,6 +11,7 @@ import hashlib
 import microdata
 from mf2py.parser import Parser
 from flask import Flask, session, jsonify, redirect, request, render_template, abort, redirect
+import silo
 
 import redis as r
 url = urlparse.urlparse(os.environ.get('REDISCLOUD_URL'))
@@ -41,18 +42,24 @@ def avatar(addr):
 
     elif cached == None:
         # otherwise try to fetch from the live page
-        protocol = addr.scheme
+        live_page = addr.scheme + '://' + host + path
 
-        base = protocol + '://' + host + path
+        # check silo
+        siloimg = silo.fetch(host, live_page, request.args) # (request.args are holding
+                                                            # things like facebook ids)
+        if siloimg:
+            redis.setex(host + path, siloimg, datetime.timedelta(days=3)) # cache
+            return redirect(siloimg)
+
         try:
-            res = requests.get(base, verify=False)
+            res = requests.get(live_page, verify=False)
         except requests.exceptions.ConnectionError:
             return abort(404)
-        base = res.url
+        live_page = res.url
         html = res.text.encode('utf-8')
 
         # alternatives to consider
-        alt = Alternatives(base, host, path)
+        alt = Alternatives(live_page, host, path)
 
         # try microformats2
         parsed = Parser(doc=html).to_dict()
@@ -77,8 +84,7 @@ def avatar(addr):
         ignoresmall = not request.args.get('acceptsmall', False)
         final = alt.best(ignoresmall=ignoresmall)
 
-        # save to redis
-        redis.setex(host + path, final, datetime.timedelta(days=3))
+        redis.setex(host + path, final, datetime.timedelta(days=3)) # cache
 
         # return
         if final:
