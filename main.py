@@ -30,6 +30,7 @@ def index():
     return redirect('http://indiewebcamp.com/webvatar')
 
 @app.route('/<path:addr>/')
+@app.route('/<path:addr>')
 def avatar(addr):
     addr = addr.lower()
     if not addr.startswith('https://') and not addr.startswith('http://'):
@@ -45,21 +46,28 @@ def avatar(addr):
         # if something is found, send it
         return redirect(cached)
 
+    elif cached == '404':
+      return abort(404)
+
     elif cached == None:
         # otherwise try to fetch from the live page
         live_page = addr.scheme + '://' + host + path
 
         # check silo
         siloimg = silo.fetch(host, live_page, request.args) # (request.args are holding
-                                                            # things like facebook ids)
         if siloimg:
             redis.setex(host + path, siloimg, datetime.timedelta(days=15)) # cache
             return redirect(siloimg)
 
         try:
             res = requests.get(live_page, verify=False)
+            if res.status_code == 404:
+                raise requests.exceptions.ConnectionError
         except requests.exceptions.ConnectionError:
+            # save the 404 in our redis cache
+            redis.setex(host + path, '404', datetime.timedelta(days=100))
             return abort(404)
+
         live_page = res.url
         html = res.text.encode('utf-8')
 
