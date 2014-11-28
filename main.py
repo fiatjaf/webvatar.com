@@ -20,6 +20,11 @@ redis = r.Redis(host=url.hostname, port=url.port, password=url.password)
 app = Flask(__name__)
 app.debug = True
 
+@app.after_request
+def add_cache(response):
+    response.cache_control.max_age = 1296000
+    return response
+
 @app.route('/')
 def index():
     return redirect('http://indiewebcamp.com/webvatar')
