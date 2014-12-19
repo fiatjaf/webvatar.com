@@ -49,7 +49,7 @@ def avatar(addr):
     elif cached == '404':
       return abort(404)
 
-    elif cached == None:
+    else:
         # otherwise try to fetch from the live page
         live_page = addr.scheme + '://' + host + path
 
