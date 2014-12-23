@@ -32,6 +32,10 @@ def index():
 @app.route('/<path:addr>/')
 @app.route('/<path:addr>')
 def avatar(addr):
+    redis.hincrby('referrals', request.referrer, 1)
+    redis.hincrby('addrs', addr, 1)
+    redis.hincrby('urls', request.url, 1)
+
     addr = addr.lower()
     if not addr.startswith('https://') and not addr.startswith('http://'):
         addr = 'http://' + addr
