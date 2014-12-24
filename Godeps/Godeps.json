@@ -3,6 +3,16 @@
 	"GoVersion": "go1.2.1",
 	"Deps": [
 		{
+			"ImportPath": "code.google.com/p/cascadia",
+			"Comment": "null-31",
+			"Rev": "5d796540e3cb93ea0556c897e6a3c7690f614d35"
+		},
+		{
+			"ImportPath": "github.com/PuerkitoBio/goquery",
+			"Comment": "v0.3.2-66-g12a46cd",
+			"Rev": "12a46cd4a183cabd212b37144cf4df55454cf1b8"
+		},
+		{
 			"ImportPath": "github.com/codegangsta/inject",
 			"Comment": "v1.0-rc1-4-g4b81725",
 			"Rev": "4b8172520a03fa190f427bbd284db01b459bfce7"
@@ -11,6 +21,14 @@
 			"ImportPath": "github.com/go-martini/martini",
 			"Comment": "v1.0-81-gccdc6a3",
 			"Rev": "ccdc6a3a7fdd6e4de5cd3811b42293d9ee23c780"
+		},
+		{
+			"ImportPath": "github.com/hoisie/redis",
+			"Rev": "788f01e396a99c96c8f56338383926f16841ebae"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "8c5df243b6b387aeb4414824098c7630eca62cef"
 		}
 	]
 }

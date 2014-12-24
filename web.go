@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-martini/martini"
+	"github.com/hoisie/redis"
 	"log"
 	"net/http"
 	"net/url"
@@ -23,17 +24,36 @@ func main() {
 		http.Redirect(res, req, "http://indiewebcamp.com/webvatar", 302)
 	})
 
-	m.Get("/**", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
+	// connect to redis
+	redisU, err := url.Parse(os.Getenv("REDISCLOUD_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	redisPw, _ := redisU.User.Password()
+	var rd redis.Client
+	rd.Addr = redisU.Host
+	rd.Password = redisPw
 
+	m.Get("/**", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
 		// parse url
 		target := strings.ToLower(params["_1"])
-		if strings.HasPrefix(target, "http://") == false || strings.HasPrefix(target, "https://") {
+		if strings.HasPrefix(target, "http://") == false || strings.HasPrefix(target, "https://") == false {
 			target = "http://" + target
 		}
 		t, err := url.Parse(target)
 		if err != nil {
-			log.Fatal(err)
-			http.Error(res, "Oops!", http.StatusInternalServerError)
+			log.Print(err)
+			http.Error(res, "Oops!", http.StatusNotFound)
+			return
+		}
+		target = t.String()
+
+		// search url in cache
+		cachedB, err := rd.Get(t.Host + t.Path)
+		if err == nil {
+			cached := string(cachedB)
+			log.Print(cached)
+			http.Redirect(res, req, cached, 302)
 			return
 		}
 
@@ -42,16 +62,16 @@ func main() {
 		bestImageSize := 0
 
 		// parse HTML in search for images
-		htmlResp, err := insecureClient.Get(t.String())
+		htmlResp, err := insecureClient.Get(target)
 		if err != nil {
-			log.Fatal(err)
-			http.Error(res, "Oops!", http.StatusInternalServerError)
+			log.Print(err)
+			http.Error(res, "Oops!", http.StatusNotFound)
 			return
 		}
 		doc, err := goquery.NewDocumentFromResponse(htmlResp)
 		if err != nil {
-			log.Fatal(err)
-			http.Error(res, "Oops!", http.StatusInternalServerError)
+			log.Print(err)
+			http.Error(res, "Oops!", http.StatusNoContent)
 			return
 		}
 		doc.Find("h-card u-photo, [rel=\"icon\"]").EachWithBreak(func(i int, s *goquery.Selection) bool {
@@ -94,6 +114,9 @@ func main() {
 
 		if bestImageUrl == "" {
 			bestImageUrl = "http://google.com/"
+		} else {
+			// save url in cache
+			rd.Set(target, []byte(bestImageUrl))
 		}
 		http.Redirect(res, req, bestImageUrl, 302)
 	})
