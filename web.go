@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/md5"
 	"crypto/tls"
+	"encoding/hex"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-martini/martini"
 	"github.com/hoisie/redis"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -268,7 +271,13 @@ func alternative(defaultImage string, domain string) string {
 			}
 			return "http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||" + strings.Join(lines, "|") + "||"
 		default:
-			return "https://secure.gravatar.com/avatar/" + domain + "?d=" + defaultImage
+			return "https://secure.gravatar.com/avatar/" + computeMD5(domain) + "?d=" + defaultImage
 		}
 	}
+}
+
+func computeMD5(str string) string {
+	h := md5.New()
+	io.WriteString(h, str)
+	return hex.EncodeToString(h.Sum(nil))
 }
