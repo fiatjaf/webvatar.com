@@ -20,10 +20,6 @@ func main() {
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	insecureClient := &http.Client{Transport: tr}
 
-	m.Get("/", func(res http.ResponseWriter, req *http.Request) {
-		http.Redirect(res, req, "http://indiewebcamp.com/webvatar", 302)
-	})
-
 	// connect to redis
 	redisU, err := url.Parse(os.Getenv("REDISCLOUD_URL"))
 	if err != nil {
@@ -33,6 +29,10 @@ func main() {
 	var rd redis.Client
 	rd.Addr = redisU.Host
 	rd.Password = redisPw
+
+	m.Get("/", func(res http.ResponseWriter, req *http.Request) {
+		http.Redirect(res, req, "http://indiewebcamp.com/webvatar", 302)
+	})
 
 	m.Get("/**", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
 		// parse url
@@ -74,44 +74,11 @@ func main() {
 			http.Error(res, "Oops!", http.StatusNoContent)
 			return
 		}
-		doc.Find("h-card u-photo, [rel=\"icon\"]").EachWithBreak(func(i int, s *goquery.Selection) bool {
-			imageHref, found := s.Attr("href")
-			if found == false {
-				return true
-			}
-			uImageHref, err := url.Parse(imageHref)
-			if err != nil {
-				return true
-			}
-			imageUrl := t.ResolveReference(uImageHref).String()
-
-			// found image, test size
-			imageResp, err := insecureClient.Head(imageUrl)
-			if err != nil {
-				return true
-			}
-			sSize := imageResp.Header.Get("Content-Length")
-			if sSize == "" {
-				sSize = imageResp.Header.Get("content-length")
-			}
-			nSize, err := strconv.Atoi(sSize)
-			if err != nil {
-				return true
-			}
-			if nSize > bestImageSize {
-				bestImageUrl = imageUrl
-				bestImageSize = nSize
-
-				// stop searching if image is reasonably big
-				if nSize > 8500 {
-					return false
-				}
-			}
-
-			// go test other findings
-			return true
+		doc.Find(".h-card .u-photo").EachWithBreak(func(i int, s *goquery.Selection) bool {
+			return handleMatch(s, bestImageUrl, bestImageSize, t, insecureClient)
 		})
 
+		// after testing the matches, verify the results
 		if bestImageUrl == "" {
 			bestImageUrl = "http://google.com/"
 		} else {
@@ -126,4 +93,48 @@ func main() {
 		port = "5000"
 	}
 	m.RunOnAddr("0.0.0.0:" + port)
+}
+
+func handleMatch(s *goquery.Selection,
+	bestImageUrl string,
+	bestImageSize int,
+	t *url.URL,
+	insecureClient *http.Client) bool {
+
+	imageHref, found := s.Attr("href")
+	if found == false {
+		return true
+	}
+	log.Print("inspecting " + imageHref)
+	uImageHref, err := url.Parse(imageHref)
+	if err != nil {
+		return true
+	}
+	imageUrl := t.ResolveReference(uImageHref).String()
+
+	// found image, test size
+	imageResp, err := insecureClient.Head(imageUrl)
+	if err != nil {
+		return true
+	}
+	sSize := imageResp.Header.Get("Content-Length")
+	if sSize == "" {
+		sSize = imageResp.Header.Get("content-length")
+	}
+	nSize, err := strconv.Atoi(sSize)
+	if err != nil {
+		return true
+	}
+	if nSize > bestImageSize {
+		bestImageUrl = imageUrl
+		bestImageSize = nSize
+
+		// stop searching if image is reasonably big
+		// if nSize > 8500 {
+		// 	return false
+		// }
+	}
+
+	// go test other findings
+	return true
 }
