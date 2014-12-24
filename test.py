@@ -5,13 +5,13 @@ expectations = (
     ('/tantek.com', 'http://tantek.com/photo.jpg'),
     ('/werd.io/', 'http://werd.io/file/538d0a4cbed7de5111a1ad31/thumb.jpg'),
     ('/aaronparecki.com', 'http://aaronparecki.com/images/aaronpk-256.jpg'),
-    ('/snarfed.org', 'http://snarfed.org/ryan_profile_square_thumb.jpg'),
+    ('/snarfed.org', 'https://snarfed.org/ryan_profile_square_thumb.jpg'),
     ('/ben.thatmustbe.me/?alt=robohash', 'https://ben.thatmustbe.me/image/static/icon_144.jpg'),
     ('/kylewm.com/', 'https://kylewm.com/static/img/users/kyle.jpg'),
     ('/stream.withknown.com', 'http://stream.withknown.com/file/537431cfbed7de93520ba75d/thumb.jpg'),
     ('/fiatjaf.alhur.es/?alt=robohash', 'http://robohash.org/fiatjaf.alhur.es'),
-    ('/cweiske.de', 'http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||cweiske.de||'),
-    ('/cweiske.de?acceptsmall=true', 'http://cweiske.de/favicon.ico'),
+    ('/cweiske.de?acceptsmall=n', 'http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||cweiske.de||'),
+    ('/cweiske.de', 'http://cweiske.de/favicon.ico'),
 )
 
 try:

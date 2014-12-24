@@ -55,12 +55,17 @@ func main() {
 			http.Error(res, "Oops!", http.StatusNotFound)
 			return
 		}
+
+		// important variables ahead:
 		target = t.String()
 		domain := t.Host + t.Path
 		// remove ending slash from domain
 		if strings.HasSuffix(domain, "/") {
 			domain = domain[:len(domain)-1]
 		}
+
+		// acceptsmall= or s= (default: y)
+		acceptSmall := !(qs.Get("acceptsmall") == "n" || qs.Get("s") == "n")
 
 		// d= or alt=, defaultImage
 		d := strings.Trim(qs.Get("d"), " ")
@@ -80,8 +85,7 @@ func main() {
 		cachedB, err := rd.Get(domain)
 		if err == nil {
 			cached := string(cachedB)
-			log.Print("redis got")
-			log.Print(cached)
+			log.Print("redis got", cached)
 
 			// redis cache can return a "204" string, in which case we use the default
 			if cached == "204" {
@@ -97,6 +101,14 @@ func main() {
 				return
 			}
 
+			// if not acceptSmal, check if the image is small and send an alternative
+			cachedImageSize := getImageSize(cached, insecureClient)
+			if !acceptSmall && cachedImageSize < 4500 {
+				log.Print("cached image is", cachedImageSize, "which is too small. send alternative.")
+				imageDefault := alternative(d, domain)
+				http.Redirect(res, req, imageDefault, 302)
+			}
+
 			// otherwise we send the cached url
 			http.Redirect(res, req, cached, 302)
 			return
@@ -104,8 +116,7 @@ func main() {
 
 		// no cache or forcedefault, proceed to scan the images
 		// we will fetch all images first
-		bestImageUrl := ""
-		bestImageSize := 0
+		best := bestImage{url: "", size: 0, tried: make(map[string]int)}
 
 		// parse HTML in search for images
 		htmlResp, err := insecureClient.Get(target)
@@ -116,6 +127,9 @@ func main() {
 			http.Error(res, "Oops!", http.StatusNotFound)
 			return
 		}
+		// update our base url with the url after redirection
+		t = htmlResp.Request.URL
+
 		doc, err := goquery.NewDocumentFromResponse(htmlResp)
 		if err != nil {
 			log.Print(err)
@@ -128,10 +142,16 @@ func main() {
 		// look for h-card pictures (src)
 		doc.Find(".h-card .u-photo").EachWithBreak(func(i int, s *goquery.Selection) bool {
 			imageSource, found := s.Attr("src")
-			if found == false {
+			if found == false || imageSource == "" {
+				// inexistent
+				return true
+			}
+			if _, ok := best.tried[imageSource]; ok {
+				// duplicated
 				return true
 			}
 			log.Print("inspecting " + imageSource)
+			best.tried[imageSource] = 1
 			uImageSource, err := url.Parse(imageSource)
 			if err != nil {
 				return true
@@ -140,50 +160,61 @@ func main() {
 
 			return handleImageUrl(
 				imageUrl,
-				bestImageUrl,
-				bestImageSize,
-				qs.Get("acceptsmall") == "y" || qs.Get("s") == "y",
+				&best,
 				t,
 				insecureClient,
 			)
 		})
-		// look for rel=icon (href)
-		doc.Find(".h-card .u-photo").EachWithBreak(func(i int, s *goquery.Selection) bool {
-			imageSource, found := s.Attr("href")
-			if found == false {
-				return true
-			}
-			log.Print("inspecting " + imageSource)
-			uImageSource, err := url.Parse(imageSource)
-			if err != nil {
-				return true
-			}
-			imageUrl := t.ResolveReference(uImageSource).String()
+		// look for rel=icon (href) -- but only if nothing sufficiently big was found yet
+		if best.size < 8500 {
+			log.Print("will search link[rel]")
+			doc.Find("link[rel]").EachWithBreak(func(i int, s *goquery.Selection) bool {
+				// reduce the list to only those who have "icon" or the apple thing
+				rel, _ := s.Attr("rel")
+				rels := strings.Fields(rel)
+				potentialRels := []string{"icon", "apple-touch-icon-precomposed"}
+				if !(findAny(rels, potentialRels)) {
+					return true
+				}
 
-			return handleImageUrl(
-				imageUrl,
-				bestImageUrl,
-				bestImageSize,
-				qs.Get("acceptsmall") == "y" || qs.Get("s") == "y",
-				t,
-				insecureClient,
-			)
-		})
+				imageSource, found := s.Attr("href")
+				if found == false {
+					return true
+				}
+				log.Print("inspecting " + imageSource)
+				uImageSource, err := url.Parse(imageSource)
+				if err != nil {
+					return true
+				}
+				imageUrl := t.ResolveReference(uImageSource).String()
+
+				return handleImageUrl(
+					imageUrl,
+					&best,
+					t,
+					insecureClient,
+				)
+			})
+		}
 
 		// after testing the matches, verify the results
-		if bestImageUrl == "" {
+		if best.url == "" {
 			// none found fallback to default
-			bestImageUrl = alternative(d, domain)
+			best.url = alternative(d, domain)
 
 			// save 204 (No Content) to cache
 			rd.Setex(domain, 1296000, []byte("204"))
 		} else {
 			// if found, save url in cache
-			rd.Setex(domain, 1296000, []byte(bestImageUrl))
+			rd.Setex(domain, 1296000, []byte(best.url))
+
+			// if not acceptSmall and the image is small, send an alternative
+			if !acceptSmall && best.size < 4500 {
+				best.url = alternative(d, domain)
+			}
 		}
-		log.Print("after image search, redirecting to")
-		log.Print(bestImageUrl)
-		http.Redirect(res, req, bestImageUrl, 302)
+		log.Print("after image search, redirecting to", best)
+		http.Redirect(res, req, best.url, 302)
 	})
 
 	port := os.Getenv("PORT")
@@ -193,40 +224,34 @@ func main() {
 	m.RunOnAddr("0.0.0.0:" + port)
 }
 
+type bestImage struct {
+	url   string
+	size  int
+	tried map[string]int
+}
+
 func handleImageUrl(
 	imageUrl string,
-	bestImageUrl string,
-	bestImageSize int,
-	acceptSmall bool,
+	best *bestImage,
 	t *url.URL,
 	insecureClient *http.Client,
 ) bool {
 
 	// found image, test size
-	imageResp, err := insecureClient.Head(imageUrl)
-	if err != nil {
+	size := getImageSize(imageUrl, insecureClient)
+	if size == -1 {
+		// getImageSize returns -1 when an error occurs,
+		// in this case skip everything by returning true
+		log.Print("error fetching image size.")
 		return true
 	}
-	sSize := imageResp.Header.Get("Content-Length")
-	if sSize == "" {
-		sSize = imageResp.Header.Get("content-length")
-	}
-	nSize, err := strconv.Atoi(sSize)
-	if err != nil {
-		return true
-	}
-
-	// minimum size threshold
-	if !acceptSmall && nSize < 4500 {
-		return true
-	}
-
-	if nSize > bestImageSize {
-		bestImageUrl = imageUrl
-		bestImageSize = nSize
+	if size > best.size {
+		best.url = imageUrl
+		best.size = size
 
 		// stop searching if image is reasonably big
-		if nSize > 8500 {
+		if size > 8500 {
+			log.Print("sufficient size found,", size, "stopping")
 			return false
 		}
 	}
@@ -243,10 +268,10 @@ func alternative(defaultImage string, domain string) string {
 			defaultImage = "nameshow"
 		}
 		switch defaultImage {
-		case "robohash":
-			return "http://robohash.org/" + domain
 		case "blank":
 			return "https://secure.gravatar.com/avatar/webvatar.com?d=blank"
+		case "robohash":
+			return "http://robohash.org/" + domain
 		case "nameshow":
 			linelen := len(domain)
 			var n float64
@@ -269,15 +294,48 @@ func alternative(defaultImage string, domain string) string {
 				}
 				lines = append(lines, part)
 			}
-			return "http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||" + strings.Join(lines, "|") + "||"
+			return "http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||" + strings.Join(lines, "|") + "|"
 		default:
 			return "https://secure.gravatar.com/avatar/" + computeMD5(domain) + "?d=" + defaultImage
 		}
 	}
 }
 
+func getImageSize(url string, insecureClient *http.Client) int {
+	imageResp, err := insecureClient.Head(url)
+	if err != nil {
+		return -1
+	}
+	sSize := imageResp.Header.Get("Content-Length")
+	if sSize == "" {
+		sSize = imageResp.Header.Get("content-length")
+	}
+	if sSize == "" {
+		// if there's no content-length, assume it is reasonable
+		return 4501
+	}
+
+	nSize, err := strconv.Atoi(sSize)
+	if err != nil {
+		log.Print(err)
+		return -1
+	}
+	return nSize
+}
+
 func computeMD5(str string) string {
 	h := md5.New()
 	io.WriteString(h, str)
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func findAny(list []string, what []string) bool {
+	for _, n := range list {
+		for _, w := range what {
+			if w == n {
+				return true
+			}
+		}
+	}
+	return false
 }
