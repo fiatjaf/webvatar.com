@@ -1,0 +1,19 @@
+body {
+  width: 800px;
+  margin: auto;
+  color: #666;
+}
+
+h1, h2, h3, h4, h5, h6 { color: #222; }
+p { text-align: justify: }
+a { color: #333; }
+
+ul {
+  text-align: center;  
+  list-style: none;
+}
+li { margin-top: 18px; }
+
+img {
+  width: 200px;
+}

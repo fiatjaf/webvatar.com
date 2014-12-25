@@ -34,10 +34,6 @@ func main() {
 	rd.Addr = redisU.Host
 	rd.Password = redisPw
 
-	m.Get("/", func(res http.ResponseWriter, req *http.Request) {
-		http.Redirect(res, req, "http://indiewebcamp.com/webvatar", 302)
-	})
-
 	m.Get("/**", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
 		log.Print("matched correct route")
 		log.Print(params["_1"])
