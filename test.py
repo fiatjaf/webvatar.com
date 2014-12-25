@@ -12,6 +12,10 @@ expectations = (
     ('/fiatjaf.alhur.es/?alt=robohash', 'http://robohash.org/fiatjaf.alhur.es'),
     ('/cweiske.de?acceptsmall=n', 'http://chart.apis.google.com/chart?chst=d_text_outline&chld=666|42|h|000|_|||cweiske.de||'),
     ('/cweiske.de', 'http://cweiske.de/favicon.ico'),
+    ('/fiatjaf.withknown.com', 'http://fiatjaf.withknown.com/file/5145a8fbe4ad4422adba1bf0e896d2a9/thumb.jpg'),
+    ('/http://fiatjaf.withknown.com', 'http://fiatjaf.withknown.com/file/5145a8fbe4ad4422adba1bf0e896d2a9/thumb.jpg'),
+    ('/fiatjaf.gmail.com.questo.email', 'https://secure.gravatar.com/avatar/b760f503c84d1bf47322f401066c753f?d=blank'),
+    ('/http://fiatjaf.gmail.com.questo.email', 'https://secure.gravatar.com/avatar/b760f503c84d1bf47322f401066c753f?d=blank'),
 )
 
 try:

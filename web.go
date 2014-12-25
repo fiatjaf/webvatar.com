@@ -45,7 +45,7 @@ func main() {
 
 		// parse url
 		target := strings.ToLower(params["_1"])
-		if strings.HasPrefix(target, "http://") == false ||
+		if strings.HasPrefix(target, "http://") == false &&
 			strings.HasPrefix(target, "https://") == false {
 			target = "http://" + target
 		}
