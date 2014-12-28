@@ -137,7 +137,15 @@ func main() {
 		}
 		// look for h-card pictures (src)
 		doc.Find(".h-card .u-photo").EachWithBreak(func(i int, s *goquery.Selection) bool {
-			imageSource, found := s.Attr("src")
+			var found bool
+			var imageSource string
+			if s.Is("img") {
+				imageSource, found = s.Attr("src")
+			} else {
+				// the element is possibly not an <img>
+				imageSource, found = s.Attr("href")
+			}
+
 			if found == false || imageSource == "" {
 				// inexistent
 				return true
