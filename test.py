@@ -14,11 +14,11 @@ expectations = (
     ('/cweiske.de', 'http://cweiske.de/favicon.ico'),
     ('/fiatjaf.withknown.com', 'http://fiatjaf.withknown.com/file/5145a8fbe4ad4422adba1bf0e896d2a9/thumb.jpg'),
     ('/http://fiatjaf.withknown.com', 'http://fiatjaf.withknown.com/file/5145a8fbe4ad4422adba1bf0e896d2a9/thumb.jpg'),
-    ('/fiatjaf.gmail.com.questo.email', 'https://secure.gravatar.com/avatar/b760f503c84d1bf47322f401066c753f?d=blank'),
-    ('/http://fiatjaf.gmail.com.questo.email', 'https://secure.gravatar.com/avatar/b760f503c84d1bf47322f401066c753f?d=blank'),
-    ('/ben.thatmustbe.me/?d=robohash&f=y', 'http://robohash.org/ben.thatmustbe.me')
-    ('/ben.thatmustbe.me/?d=identicon&f=y', 'https://secure.gravatar.com/avatar/eb8de282b4131c4ab253871ff867c87a?d=identicon')
-    ('/ben.thatmustbe.me/?d=identicon&f=y', 'https://secure.gravatar.com/avatar/eb8de282b4131c4ab253871ff867c87a?d=identicon')
+    ('/fiatjaf.gmail.com.questo.email', 'https://secure.gravatar.com/avatar/b760f503c84d1bf47322f401066c753f?d=blank&s=200'),
+    ('/http://fiatjaf.gmail.com.questo.email', 'https://secure.gravatar.com/avatar/b760f503c84d1bf47322f401066c753f?d=blank&s=200'),
+    ('/ben.thatmustbe.me/?d=robohash&f=y', 'http://robohash.org/ben.thatmustbe.me'),
+    ('/ben.thatmustbe.me/?d=identicon&f=y', 'https://secure.gravatar.com/avatar/eb8de282b4131c4ab253871ff867c87a?d=identicon'),
+    ('/ben.thatmustbe.me/?d=identicon&f=y', 'https://secure.gravatar.com/avatar/eb8de282b4131c4ab253871ff867c87a?d=identicon'),
 )
 
 try:
