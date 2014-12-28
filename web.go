@@ -137,6 +137,11 @@ func main() {
 		}
 		// look for h-card pictures (src)
 		doc.Find(".h-card .u-photo").EachWithBreak(func(i int, s *goquery.Selection) bool {
+			if len(s.Closest(".h-entry").Nodes) > 0 {
+				// don't accept h-cards inside h-entries, they could be of someone else
+				return true
+			}
+
 			var found bool
 			var imageSource string
 			if s.Is("img") {
