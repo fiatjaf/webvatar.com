@@ -21,6 +21,7 @@ import (
 
 func main() {
 	m := martini.Classic()
+	m.Use(martini.Static("assets", martini.StaticOptions{Fallback: "/index.html"}))
 
 	// custom http insecure client
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
