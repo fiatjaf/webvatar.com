@@ -38,7 +38,7 @@ func main() {
 	rd.Password = redisPw
 
 	m.Get("/**", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
-		log.Print("matched correct route")
+		log.Print("request from " + req.Referer())
 		log.Print(params["_1"])
 		qs := req.URL.Query()
 
